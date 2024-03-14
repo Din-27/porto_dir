@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rest-api-monitoring-bugs.fullname" . }}
+  labels:
+    {{- include "rest-api-monitoring-bugs.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rest-api-monitoring-bugs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rest-api-monitoring-bugs.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "rest-api-monitoring-bugs.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: JWT_SECRET_KEY
+              value: {{ required "You must set a valid jwt secret" .Values.environment.JWT_SECRET_KEY | quote }}
+            - name: DB_HOST
+              value: {{ required "You must set a valid mysql host" .Values.environment.DB_HOST | quote }}
+            - name: DB_PORT
+              value: {{ required "You must set a valid mysql db port" .Values.environment.DB_PORT | quote }}
+            - name: DB_NAME
+              value: {{ required "You must set a valid mysql db name" .Values.environment.DB_NAME | quote }}
+            - name: DB_USER
+              value: {{ required "You must set a valid mysql db user" .Values.environment.DB_USER | quote }}
+            - name: DB_PASS
+              value: {{ required "You must set a valid mysql db password" .Values.environment.DB_PASS | quote }}
+            - name: ASANA_API_BASE_URL
+              value: {{ required "You must set a valid asana api url" .Values.environment.ASANA_API_BASE_URL | quote }}
+            - name: ASANA_API_TOKEN
+              value: {{ required "You must set a valid asana token" .Values.environment.ASANA_API_TOKEN | quote }}
+            - name: REDIS_URL
+              value: "redis://{{ .Release.Name }}-redis-master.{{ .Release.Namespace }}.svc.cluster.local:6379"
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

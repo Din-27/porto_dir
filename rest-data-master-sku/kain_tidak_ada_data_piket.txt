@@ -1,0 +1,23 @@
+[
+  {
+    jenis_kain: 'TENCEL邃',
+  },
+  {
+    jenis_kain: 'RIB RIB COT GALAXY SCOTLIGHT 30S',
+  },
+  {
+    jenis_kain: 'COMBED 30S PRINT KOALA',
+  },
+  {
+    jenis_kain: 'TC 20S',
+  },
+  {
+    jenis_kain: 'COMBED 20S M71 BODY SIZE',
+  },
+   {
+    jenis_kain: 'KRAH COMBED 20S TULANG 2',
+  },
+  {
+    jenis_kain: 'MANSET COMBED 20S TULANG 2',
+  }
+]

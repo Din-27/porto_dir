@@ -1,0 +1,41 @@
+{
+	"compilerOptions": {
+    "target": "ESNext",
+    "module": "CommonJS",
+    "declaration": false,
+    "pretty": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+		"rootDir": "./src",
+    "importHelpers": true,
+    "downlevelIteration": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "moduleResolution": "Node",
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "typeRoots" : ["./node_modules/@types", "./src/types"],
+	},
+	"include": [
+		"./**/*.ts"
+, "src/libs/helpers/formulaAdjust.ts"	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"database",
+		"tests",
+		"jest.config.ts"
+	]
+}
+

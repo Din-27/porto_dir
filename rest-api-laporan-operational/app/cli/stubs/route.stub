@@ -1,0 +1,14 @@
+import express from 'express';
+import { runAsyncRouter } from '../../../helpers/expressHelper.js';
+
+const router = express.Router();
+
+router.post('/', runAsyncRouter(
+  async (req, res) => {
+    mySendResponse(res, {
+      message: 'My Message',
+    });
+  },
+));
+
+export default express.Router().use('/parent-path', router);

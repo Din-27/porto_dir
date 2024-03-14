@@ -1,0 +1,1 @@
+{"location":"OpsiTransferStok","id_karyawan":248,"sts":1}

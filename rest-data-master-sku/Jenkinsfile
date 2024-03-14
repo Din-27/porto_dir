@@ -1,0 +1,98 @@
+def CABANG = [
+    [
+        name: "holis",
+        ip: "192.168.20.25",
+        credentialId: "b049467c-2ec0-42ac-bc20-c4a064fb12c0",
+        appPath: "IT-Dev/rest-data-master-sku"
+    ],
+    [
+        name: "kebon-jukut",
+        ip: "192.168.10.12",
+        credentialId: "8f8d30aa-ed88-40d0-8b65-d5c1c808e2cb",
+        appPath: "IT-DEV/rest-data-master-sku"
+    ],
+    [
+        name: "yogya",
+        ip: "192.168.31.14",
+        credentialId: "3e83cb1c-50d0-4e5f-aa1b-db874337db21",
+        appPath: "PROC/rest-data-master-sku"
+    ],
+    [
+        name: "semarang",
+        ip: "192.168.81.11",
+        credentialId: "862aee62-445f-4442-9228-4b6c5bcc80a6",
+        appPath: "IT-DEV/rest-data-master-sku"
+    ],
+    [
+        name: "surabaya",
+        ip: "192.168.90.11",
+        credentialId: "10a6161a-9735-45cc-b13b-37ef6679f74e",
+        appPath: "it-dev/rest-data-master-sku"
+    ],
+]
+
+pipeline {
+    agent any
+    stages {
+        stage('Install npm dependencies') {
+            steps {
+                sh 'npm install --silent'
+            }
+        }
+        stage('Compress') {
+            steps {
+                tar(
+                    file: "${JOB_NAME}.tar.gz",
+                    compress: true,
+                    overwrite: true,
+                    exclude: '.git',
+                )
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    for (cabang in CABANG) {
+                        withCredentials([sshUserPrivateKey(
+                            credentialsId: cabang.credentialId,
+                            keyFileVariable: "SSH_KEY",
+                            usernameVariable: "SSH_USER",
+                        )]) {
+                            def remote = [: ]
+
+                            remote.name = cabang.ip
+                            remote.host = cabang.ip
+                            remote.allowAnyHosts = true
+                            remote.user = SSH_USER
+                            remote.identityFile = SSH_KEY
+                            remote.pty = true
+
+                            stage("$cabang.name | remove existing compressed file") {
+                                sshRemove remote: remote, path: "${JOB_NAME}.tar.gz", failOnError: false
+                            }
+                            stage("$cabang.name | copy compressed file") {
+                                sshPut remote: remote, from: "${JOB_NAME}.tar.gz", into: '.'
+                            }
+                            stage("$cabang.name | ensure app folder exists") {
+                                sshCommand remote: remote, command: "mkdir -p $cabang.appPath"
+                            }
+                            stage("$cabang.name | ensure ownership") {
+                                sshCommand remote: remote, command: "sudo chown -R $SSH_USER $cabang.appPath", sudo: true
+                            }
+                            stage("$cabang.name | ensure permission") {
+                                sshCommand remote: remote, command: "sudo chmod -R 777 $cabang.appPath", sudo: true
+                            }
+                            stage("$cabang.name | extract") {
+                                sshCommand remote: remote, command: "tar --overwrite -xzf ${JOB_NAME}.tar.gz -C $cabang.appPath"
+                                sshRemove remote: remote, path: "${JOB_NAME}.tar.gz", failOnError: false
+                            }
+                            stage("$cabang.name | restart app") {
+                                sshCommand remote: remote, command: "cd $cabang.appPath && pm2 restart ecosystem.config.js"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

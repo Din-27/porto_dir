@@ -1,0 +1,98 @@
+pipeline {
+    environment {
+        IMAGE_NAME = "knitto/${env.JOB_NAME}"
+        TAG = "${env.GIT_COMMIT[0..7]}"
+        REGISTRY = "192.168.20.103"
+
+        JWT_SECRET_KEY = credentials('326beba9-b37e-4101-acca-4e16b01e4050')
+        DB_HOST = credentials('9cb28eac-5420-47d7-ad84-9653e2013b71')
+        DB_PORT = credentials('284dca7c-7593-4124-9473-013a7b27e6a2')
+        DB_NAME = credentials('b9694467-0ce8-4358-a71f-4df0362e1256')
+        DB_USER = credentials('e6474c87-8af3-4b99-b5e7-c686346b127b')
+        DB_PASS = credentials('3255c593-0eb4-4596-b2dc-e86004424d32')
+        ASANA_API_BASE_URL = "https://app.asana.com/api/1.0"
+        ASANA_API_TOKEN = credentials('90e1da9a-a747-4070-9097-0d4c01b90650')
+    }
+    
+    agent {
+        kubernetes {
+            yamlFile "buildPod.yml"
+        }
+    }
+
+    stages {
+        stage('Build and push image') {
+            steps {
+                container('kaniko') {
+                    sh """
+                        /kaniko/executor \
+                            -f `pwd`/Dockerfile \
+                            -c `pwd` \
+                            --insecure \
+                            --skip-tls-verify \
+                            --cache=true \
+                            --destination=${REGISTRY}/${IMAGE_NAME}:${TAG} \
+                            --destination=${REGISTRY}/${IMAGE_NAME}:latest
+                    """
+                }
+            }
+        }
+        stage('Push helm chart') {
+            steps {
+                 withCredentials([
+                    usernamePassword(
+                        credentialsId: 'beefd290-dc7e-4614-b6c6-7f20332d0cf6',
+                        usernameVariable: 'USERNAME',
+                        passwordVariable: 'PASSWORD'
+                    )
+                ]) {
+                    container('k8s') {
+                        sh 'helm lint ./charts/${JOB_NAME}'
+                        sh 'helm package ./charts/${JOB_NAME}'
+                        sh 'helm repo add knitto https://${REGISTRY}/chartrepo/knitto --username="$USERNAME" --password="$PASSWORD" --insecure-skip-tls-verify'
+                        sh 'helm cm-push ${JOB_NAME}-*.tgz knitto --insecure'
+                    }
+                }
+            }
+        }
+        stage('Deploy to kubernetes') {
+            steps {
+                // Update repo
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'beefd290-dc7e-4614-b6c6-7f20332d0cf6',
+                        usernameVariable: 'USERNAME',
+                        passwordVariable: 'PASSWORD'
+                    )
+                ]) {
+                    container('k8s') {
+                        sh 'helm repo add knitto https://${REGISTRY}/chartrepo/knitto --username="$USERNAME" --password="$PASSWORD" --insecure-skip-tls-verify'
+                        sh 'helm repo update knitto'
+                    }
+                }
+                // Deploy
+                withKubeConfig([credentialsId: '104af038-1de5-4a80-93ad-c840e424ccc9']) {
+                    container('k8s') {
+                        sh '''
+                            helm upgrade $JOB_NAME $IMAGE_NAME \
+                                --kubeconfig=$KUBECONFIG \
+                                --force \
+                                --install \
+                                --insecure-skip-tls-verify \
+                                --set image.tag=$TAG \
+                                --set service.type=LoadBalancer \
+                                --set environment.JWT_SECRET_KEY="$JWT_SECRET_KEY" \
+                                --set environment.DB_HOST="$DB_HOST" \
+                                --set environment.DB_PORT="$DB_PORT" \
+                                --set environment.DB_NAME="$DB_NAME" \
+                                --set environment.DB_USER="$DB_USER" \
+                                --set environment.DB_PASS="$DB_PASS" \
+                                --set environment.ASANA_API_BASE_URL="$ASANA_API_BASE_URL" \
+                                --set environment.ASANA_API_TOKEN="$ASANA_API_TOKEN" \
+                        '''
+                    }
+                }
+            }
+        }
+    }
+}

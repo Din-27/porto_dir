@@ -1,0 +1,11 @@
+"use strict";
+
+import BaseService from "./BaseService.js"
+
+class MyService extends BaseService {
+    main () {
+        // 
+    }
+}
+
+export default new MyService()

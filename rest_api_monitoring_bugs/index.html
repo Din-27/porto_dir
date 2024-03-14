@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>mingguan : <span id="mingguan"></span></h1>
+    <h1>bulanan : <span id="bulanan"></span></h1>
+    <h1>bugs it : <span id="bugs"></span></h1>
+    <h1>test : <span id="test"></span></h1>
+    </br>
+    <h1>test2 : <span id="test2"></span></h1>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io()
+    socket.on('jumlah_bugs', (data) => {
+        document.querySelector('#mingguan').innerHTML = data.mingguan
+        document.querySelector('#bulanan').innerHTML = data.bulanan
+        document.querySelector('#bugs').innerHTML = data.bugsBelumTerselesaikan
+    })
+    socket.on('bugs_monitor', (test) => {
+        document.querySelector('#test').innerHTML = `</br>${'bugsBelumDiproses : ' + test.bugsBelumDiproses} </br> 
+        ${'bugsDitanganiTechnicalSupport : ' + test.bugsDitanganiTechnicalSupport} </br>
+        ${'bugsDitanganiSistemAnalis : ' + test.bugsDitanganiSistemAnalis} </br>
+        ${'bugsDitanganiTimIT : ' + test.bugsDitanganiTimIT} </br>`
+    })
+    socket.on('sistem_monitor', (test2) => {
+        document.querySelector('#test2').innerHTML = test2
+    })
+</script>
+
+</html>
